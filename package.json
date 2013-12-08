@@ -1,6 +1,6 @@
 {
   "name": "hashmap-native",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Native hashmap for Node.js",
   "main": "./index.js",
   "keywords": [

@@ -45,6 +45,10 @@ private:
 		K key = UnwrapValue<K>(args[0]);
 		auto it = obj->map.find(key);
 
+		if (it == obj->map.end()) {
+			return scope.Close(v8::Undefined());
+		}
+
 		return scope.Close(WrapValue<V>(it->second));
 	}
 	
