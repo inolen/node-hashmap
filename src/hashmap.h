@@ -143,7 +143,7 @@ int32_t UnwrapValue<int32_t>(const v8::Local<v8::Value> &arg) {
 
 template <> 
 v8::Handle<v8::Value> WrapValue<int32_t>(const int32_t &value) {
-	return v8::Number::New(value);
+	return v8::Integer::New(value);
 }
 
 // std::string specialization
