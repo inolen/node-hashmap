@@ -15,9 +15,69 @@ class HashMap : public node::ObjectWrap {
 private:
 	std::unordered_map<K, V> map;
 
+	class It : public node::ObjectWrap {
+	private:
+		const std::unordered_map<K, V> *map;
+		typename std::unordered_map<K, V>::const_iterator it;
+
+	public:
+		It(const std::unordered_map<K, V> *map) : map(map) {
+			it = map->begin();
+		}
+
+		static v8::Handle<v8::Value> New(const std::unordered_map<K, V> *map) {
+			v8::Local<v8::Object> obj = GetCtor()->NewInstance();
+			It *it = new It(map);
+
+			it->Wrap(obj);
+
+			return obj;
+		}
+
+		static v8::Handle<v8::Value> HasNext(const v8::Arguments &args) {
+			v8::HandleScope scope;
+			It *obj = node::ObjectWrap::Unwrap<It>(args.This());
+
+			return v8::Boolean::New(obj->it != obj->map->end());
+		}
+
+		static v8::Handle<v8::Value> Next(const v8::Arguments &args) {
+			v8::HandleScope scope;
+			It *obj = node::ObjectWrap::Unwrap<It>(args.This());
+
+			v8::Handle<v8::Array> result = v8::Array::New(2);
+      result->Set(0, WrapValue(obj->it->first));
+      result->Set(1, WrapValue(obj->it->second));
+
+			obj->it++;
+
+			return scope.Close(result);
+		}
+
+		static v8::Persistent<v8::Function> GetCtor() {
+			static v8::Persistent<v8::Function> persistentCtor;
+
+			if (persistentCtor.IsEmpty()) {
+				auto tpl = v8::FunctionTemplate::New();
+				tpl->SetClassName(v8::String::NewSymbol("HashMapIt"));
+				tpl->InstanceTemplate()->SetInternalFieldCount(1);
+
+				auto prototype = tpl->PrototypeTemplate();
+				prototype->Set("hasNext", v8::FunctionTemplate::New(HasNext)->GetFunction());
+				prototype->Set("next", v8::FunctionTemplate::New(Next)->GetFunction());
+
+				persistentCtor = v8::Persistent<v8::Function>::New(tpl->GetFunction());
+			}
+
+			return persistentCtor;
+		}
+	};
+
 	static v8::Handle<v8::Value> New(const v8::Arguments &args) {
 		HashMap *obj = new HashMap();
+
 		obj->Wrap(args.This());
+
 		return args.This();
 	}
 
@@ -51,7 +111,14 @@ private:
 
 		return scope.Close(WrapValue<V>(it->second));
 	}
-	
+
+	static v8::Handle<v8::Value> Iterator(const v8::Arguments &args) {
+		v8::HandleScope scope;
+		HashMap *obj = node::ObjectWrap::Unwrap<HashMap>(args.This());
+
+		return scope.Close(It::New(&obj->map));
+	}
+
 	static v8::Handle<v8::Value> Put(const v8::Arguments &args) {
 		v8::HandleScope scope;
 		HashMap *obj = node::ObjectWrap::Unwrap<HashMap>(args.This());
@@ -122,6 +189,7 @@ public:
 		prototype->Set("contains", v8::FunctionTemplate::New(Contains)->GetFunction());
 		prototype->Set("empty", v8::FunctionTemplate::New(Empty)->GetFunction());
 		prototype->Set("get", v8::FunctionTemplate::New(Get)->GetFunction());
+		prototype->Set("iterator", v8::FunctionTemplate::New(Iterator)->GetFunction());
 		prototype->Set("put", v8::FunctionTemplate::New(Put)->GetFunction());
 		prototype->Set("remove", v8::FunctionTemplate::New(Remove)->GetFunction());
 		prototype->Set("size", v8::FunctionTemplate::New(Size)->GetFunction());
